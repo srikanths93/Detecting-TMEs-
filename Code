@@ -1,0 +1,609 @@
+Code for database connection
+package tme;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.ArrayList;
+public class DBCon{
+    private static Connection con;
+public static Connection getCon()throws Exception {
+    Class.forName("com.mysql.jdbc.Driver");
+    con = DriverManager.getConnection("jdbc:mysql://localhost/tme","root","root");
+     return con;
+}
+public static String register(String[] input)throws Exception{
+    String msg="fail";
+    boolean flag=false;
+    boolean flag1=false;
+    con = getCon();
+    Statement stmt=con.createStatement();
+    ResultSet rs=stmt.executeQuery("select user from newuser where user='"+input[0]+"'");
+    if(rs.next()){
+        flag=true;
+        msg = "Username already exist";
+    }
+    stmt=con.createStatement();
+    rs=stmt.executeQuery("select pass from newuser where pass='"+input[1]+"'");
+    if(rs.next() && !flag){
+        flag1=true;
+        msg = "Password already exist";
+    }
+    if(!flag && !flag1){
+    PreparedStatement stat=con.prepareStatement("insert into newuser values(?,?,?,?,?,?)");
+    stat.setString(1,input[0]);
+    stat.setString(2,input[1]);
+    stat.setString(3,input[2]);
+	stat.setString(4,input[3]);
+	stat.setString(5,input[4]);
+	stat.setString(6,input[5]);
+    int i=stat.executeUpdate();
+    if(i > 0){
+		msg = "pass";
+	}
+    }
+    return msg;
+}
+public static String login(String input[])throws Exception{
+    String msg="fail";
+    con = getCon();
+    System.out.println(input[0]);
+    Statement stmt=con.createStatement();
+    ResultSet rs=stmt.executeQuery("select user,pass from newuser where user='"+input[0]+"' && pass='"+input[1]+"'");
+    if(rs.next()){
+        msg = "pass";
+    }
+    System.out.println(msg);
+    return msg;
+}
+}
+Code to process mail 
+package tme;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.BorderLayout;
+import javax.swing.JButton;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.ImageIcon;
+import javax.swing.UIManager;
+import javax.swing.JTextField;
+import javax.swing.JFileChooser;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import javax.swing.JScrollPane;
+import javax.swing.table.TableColumn;
+import java.util.ArrayList;
+import javax.swing.JOptionPane;
+import java.io.FileWriter;
+import org.jfree.ui.RefineryUtilities;
+import java.util.Random;
+import java.awt.Cursor;
+public class ProcessMail extends JFrame
+{
+	JLabel l1,l2,l3;
+	JPanel p1,p2,p3,p4;
+	JButton b1,b2,b3,b4;
+	JFileChooser chooser;
+	JTextField tf1,tf2;
+	JTable table;
+	DefaultTableModel dtm;
+	JScrollPane jsp;
+	Font f1,f2;
+	String col[]={"Recipient","Date","Mail Size","Sender","CharacterSet","Encoding","Mime Type","Subject"};
+	public ProcessMail(){
+	super("Process Mails");
+	p1 = new JPanel();
+	f1 = new Font("Monospaced",Font.BOLD,22);
+	l1 = new JLabel("<html><body><center>DETECTING TARGETED MALICIOUS EMAIL</center></body></html>");
+	l1.setForeground(new Color(125,54,2));
+	l1.setFont(f1);
+	p1.add(l1);
+	p1.setBackground(new Color(140,150,180));
+	f2 = new Font("Monospaced",Font.BOLD,16);
+	p3 = new JPanel();
+	p3.setLayout(new BorderLayout());
+	p3.setBackground(new Color(171,100,100));
+	p2 = new JPanel();
+	p2.setBackground(new Color(171,100,100));
+	l2 = new JLabel("Upload Mails");
+	l2.setForeground(new Color(155,230,220));
+	l2.setFont(f2);
+	p2.add(l2);
+           tf1 = new JTextField(30);
+	tf1.setFont(f2);
+	p2.add(tf1);
+	chooser = new JFileChooser(new File("E:/kaleem/MTECh"));
+	chooser.setFileSelectionMode(chooser.DIRECTORIES_ONLY);
+	b1 = new JButton("Browse");
+	b1.setFont(f2);
+	p2.add(b1);
+	b1.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			int option = chooser.showOpenDialog(ProcessMail.this);
+			if(option == chooser.APPROVE_OPTION){
+				File file = chooser.getSelectedFile();
+				tf1.setText(file.getPath());
+				Cursor hourglassCursor = new Cursor(Cursor.WAIT_CURSOR);
+				setCursor(hourglassCursor);
+				try{
+					FExtraction.load(file.getPath());
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				Cursor normalCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+				setCursor(normalCursor);
+				JOptionPane.showMessageDialog(null,"Click on Preprocessing button to view mail features");
+			}
+		}
+	});	
+	dtm = new DefaultTableModel(){
+		public boolean isCellEditable(int r,int c){
+			return false;
+		}
+	};
+	table = new JTable(dtm);
+	table.setFont(f2);
+	jsp = new JScrollPane(table);
+	dtm.addColumn(col[0]);
+	dtm.addColumn(col[1]);
+	dtm.addColumn(col[2]);
+	dtm.addColumn(col[3]);
+	dtm.addColumn(col[4]);
+	dtm.addColumn(col[5]);
+	dtm.addColumn(col[6]);
+	dtm.addColumn(col[7]);
+	p3.add(p2,BorderLayout.NORTH);
+	p3.add(jsp,BorderLayout.CENTER);
+	p4 = new JPanel();
+	p4.setBackground(new Color(171,100,100));
+	b3 = new JButton("Preprocessing");
+	b3.setFont(f2);
+	p4.add(b3);
+	b3.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			try{
+				clearTable();
+				ArrayList<String> list = FExtraction.getList();
+				for(int i=0;i<list.size();i++){
+					String s[] = list.get(i).split(",");
+					Object row[]={s[0],s[1],s[2],s[3],s[4],s[5],s[6],s[7]};
+					dtm.addRow(row);
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	});
+
+	b2 = new JButton("Feature Extraction");
+	b2.setFont(f2);
+	p4.add(b2);
+	b2.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			try{
+				Cursor hourglassCursor = new Cursor(Cursor.WAIT_CURSOR);
+				setCursor(hourglassCursor);
+				Convert.convert("dataset.csv","dataset.arff");
+				ViewFeatures vf = new ViewFeatures();
+				vf.setVisible(true);
+				vf.setSize(800,600);
+				vf.showFeatures();
+				Cursor normalCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+				setCursor(normalCursor);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	});
+	b4 = new JButton("Classification");
+	b4.setFont(f2);
+	p4.add(b4);
+	b4.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			try{
+				Cursor hourglassCursor = new Cursor(Cursor.WAIT_CURSOR);
+				setCursor(hourglassCursor);
+				Classification cls = new Classification();
+				RandomForestDem.process(cls.getArea());
+				cls.setVisible(true);
+				cls.setSize(800,600);
+				Cursor normalCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+				setCursor(normalCursor);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	});	
+	getContentPane().add(p1,BorderLayout.NORTH);
+	getContentPane().add(p3,BorderLayout.CENTER);
+	getContentPane().add(p4,BorderLayout.SOUTH);
+}
+public void clearTable(){
+	for(int i=dtm.getRowCount()-1;i>=0;i--){
+		dtm.removeRow(i);
+	}
+}
+}
+Code for classification
+package tme;
+import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+import javax.swing.JFrame;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.awt.Font;
+public class Classification extends JFrame
+{
+	JTextArea area;
+	JScrollPane jsp;	
+public Classification(){
+	setTitle("Random Forest Classification");
+	area = new JTextArea();
+	jsp = new JScrollPane(area);
+	getContentPane().add(jsp);
+	area.setEditable(false);
+	area.setFont(new Font("Monospaced",Font.BOLD,16));	
+}
+public JTextArea getArea(){
+	return area;
+}
+}
+Code for feature extraction
+package tme;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.BorderLayout;
+import javax.swing.JButton;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.ImageIcon;
+import javax.swing.UIManager;
+import javax.swing.JTextField;
+import javax.swing.JFileChooser;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import javax.swing.JScrollPane;
+import javax.swing.table.TableColumn;
+import java.util.ArrayList;
+import javax.swing.JOptionPane;
+import java.io.FileWriter;
+import org.jfree.ui.RefineryUtilities;
+import java.util.Random;
+import java.awt.Cursor;
+public class ProcessMail extends JFrame
+{
+	JLabel l1,l2,l3;
+	JPanel p1,p2,p3,p4;
+	JButton b1,b2,b3,b4;
+	JFileChooser chooser;
+	JTextField tf1,tf2;
+	JTable table;
+	DefaultTableModel dtm;
+	JScrollPane jsp;
+	Font f1,f2;
+	String col[]={"Recipient","Date","Mail Size","Sender","CharacterSet","Encoding","Mime Type","Subject"};	
+public ProcessMail(){
+	super("Process Mails");
+	p1 = new JPanel();
+	f1 = new Font("Monospaced",Font.BOLD,22);
+	l1 = new JLabel("<html><body><center>DETECTING TARGETED MALICIOUS EMAIL</center></body></html>");
+	l1.setForeground(new Color(125,54,2));
+	l1.setFont(f1);
+	p1.add(l1);
+	p1.setBackground(new Color(140,150,180));
+	f2 = new Font("Monospaced",Font.BOLD,16);
+	p3 = new JPanel();
+	p3.setLayout(new BorderLayout());
+	p3.setBackground(new Color(171,100,100));
+	p2 = new JPanel();
+	p2.setBackground(new Color(171,100,100));
+	l2 = new JLabel("Upload Mails");
+	l2.setForeground(new Color(155,230,220));
+	l2.setFont(f2);
+	p2.add(l2);
+
+	tf1 = new JTextField(30);
+	tf1.setFont(f2);
+	p2.add(tf1);
+	chooser = new JFileChooser(new File("E:/kaleem/MTECh"));
+	chooser.setFileSelectionMode(chooser.DIRECTORIES_ONLY);
+	b1 = new JButton("Browse");
+	b1.setFont(f2);
+	p2.add(b1);
+	b1.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			int option = chooser.showOpenDialog(ProcessMail.this);
+			if(option == chooser.APPROVE_OPTION){
+				File file = chooser.getSelectedFile();
+				tf1.setText(file.getPath());
+				Cursor hourglassCursor = new Cursor(Cursor.WAIT_CURSOR);
+				setCursor(hourglassCursor);
+				try{
+					FExtraction.load(file.getPath());
+				}catch(Exception e){
+					e.printStackTrace();
+				}
+				Cursor normalCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+				setCursor(normalCursor);
+				JOptionPane.showMessageDialog(null,"Click on Preprocessing button to view mail features");
+			}
+		}
+	});
+	dtm = new DefaultTableModel(){
+		public boolean isCellEditable(int r,int c){
+			return false;
+		}
+	};
+	table = new JTable(dtm);
+	table.setFont(f2);
+	jsp = new JScrollPane(table);
+	dtm.addColumn(col[0]);
+	dtm.addColumn(col[1]);
+	dtm.addColumn(col[2]);
+	dtm.addColumn(col[3]);
+	dtm.addColumn(col[4]);
+	dtm.addColumn(col[5]);
+	dtm.addColumn(col[6]);
+	dtm.addColumn(col[7]);	
+	p3.add(p2,BorderLayout.NORTH);
+	p3.add(jsp,BorderLayout.CENTER);
+	p4 = new JPanel();
+	p4.setBackground(new Color(171,100,100));
+	b3 = new JButton("Preprocessing");
+	b3.setFont(f2);
+	p4.add(b3);
+	b3.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			try{
+				clearTable();
+				ArrayList<String> list = FExtraction.getList();
+				for(int i=0;i<list.size();i++){
+					String s[] = list.get(i).split(",");
+					Object row[]={s[0],s[1],s[2],s[3],s[4],s[5],s[6],s[7]};
+					dtm.addRow(row);
+				}
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	});
+
+	b2 = new JButton("Feature Extraction");
+	b2.setFont(f2);
+	p4.add(b2);
+	b2.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			try{
+				Cursor hourglassCursor = new Cursor(Cursor.WAIT_CURSOR);
+				setCursor(hourglassCursor);
+				Convert.convert("dataset.csv","dataset.arff");
+				ViewFeatures vf = new ViewFeatures();
+				vf.setVisible(true);
+				vf.setSize(800,600);
+				vf.showFeatures();
+				Cursor normalCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+				setCursor(normalCursor);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	});
+	b4 = new JButton("Classification");
+	b4.setFont(f2);
+	p4.add(b4);
+	b4.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			try{
+				Cursor hourglassCursor = new Cursor(Cursor.WAIT_CURSOR);
+				setCursor(hourglassCursor);
+				Classification cls = new Classification();
+				RandomForestDem.process(cls.getArea());
+				cls.setVisible(true);
+				cls.setSize(800,600);
+				Cursor normalCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+				setCursor(normalCursor);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	});
+		getContentPane().add(p1,BorderLayout.NORTH);
+	getContentPane().add(p3,BorderLayout.CENTER);
+	getContentPane().add(p4,BorderLayout.SOUTH);
+}
+public void clearTable(){
+	for(int i=dtm.getRowCount()-1;i>=0;i--){
+		dtm.removeRow(i);
+	}
+}
+}
+Code for classification
+package tme;
+import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+import javax.swing.JFrame;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.awt.Font;
+public class Classification extends JFrame
+{
+	JTextArea area;
+	JScrollPane jsp;
+	
+public Classification(){
+	setTitle("Random Forest Classification");
+	area = new JTextArea();
+	jsp = new JScrollPane(area);
+	getContentPane().add(jsp);
+	area.setEditable(false);
+	area.setFont(new Font("Monospaced",Font.BOLD,16));
+}
+public JTextArea getArea(){
+	return area;
+}
+}
+Code for random forest algorithm
+package tme;
+import java.io.FileReader;
+import weka.core.Instances;
+import weka.classifiers.trees.RandomForest;
+import weka.core.Attribute;
+import weka.classifiers.Evaluation;
+import javax.swing.JTextArea;
+public class RandomForestDem {
+ public static void process(JTextArea area) throws Exception {
+	 area.setText("");
+	 RandomForest rf = new RandomForest();
+	 FileReader reader = new FileReader("dataset.arff"); 
+     Instances instances = new Instances(reader);
+     instances.setClassIndex(instances.numAttributes() - 1);
+     rf.setSeed(1);
+     rf.setNumTrees(7);
+     Attribute att = new Attribute("length");  
+	 rf.buildClassifier(instances);
+     rf.setNumTrees(7); 
+	 rf.setPrintTrees(true);
+	 area.append(rf.toString()+"\n");
+	 Evaluation eval = new Evaluation(instances);
+	 eval.evaluateModel(rf, instances);
+	 area.append(eval.toSummaryString("\nResults\n======\n", true)+"\n");
+	 area.append(eval.toClassDetailsString()+"\n");
+	 area.append(eval.toMatrixString()+"\n");
+ }
+}
+Code for user interface screen
+package tme;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JLabel;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.BorderLayout;
+import javax.swing.JButton;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.ImageIcon;
+import javax.swing.UIManager;
+public class Tme extends JFrame
+{
+	JLabel l1,l2;
+	JPanel p1,p2,p3;
+	JButton b1,b2,b3;
+	ImageIcon icon;
+	Font f1,f2;
+public Tme(){
+	super("Detecting Targeted Malicious Email");
+	p1 = new JPanel();
+	f1 = new Font("Monospaced",Font.BOLD,22);
+	l1 = new JLabel("<html><body><center>DETECTING TARGETED MALICIOUS EMAIL</center></body></html>");
+	l1.setForeground(new Color(125,54,2));
+	l1.setFont(f1);
+	p1.add(l1);
+	p1.setBackground(new Color(140,150,180));
+	p2 = new JPanel();
+	icon = new ImageIcon("img/images.jpg");
+	l2 = new JLabel(icon);
+	p2.add(l2);
+	p3 = new JPanel();
+	p3.setLayout(new BorderLayout());
+	f2 = new Font("Monospaced",Font.BOLD,16);
+	JPanel pan1 = new JPanel(); 
+	b1 = new JButton("Login");
+	b1.setFont(f2);
+	pan1.add(b1);
+	p3.add(pan1,BorderLayout.NORTH);
+	b1.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			Login login = new Login(Tme.this);
+			login.setVisible(true);
+			login.pack();
+		}
+	});
+	JPanel pan2 = new JPanel(); 
+	b2 = new JButton("New User");
+	b2.setFont(f2);
+	b2.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			NewUser user = new NewUser(Tme.this);
+			user.setVisible(true);
+			user.pack();
+		}
+	});
+	pan2.add(b2);
+	p3.add(pan2,BorderLayout.CENTER);
+
+	JPanel pan3 = new JPanel(); 
+	b3 = new JButton("Exit");
+	b3.setFont(f2);
+	pan3.add(b3);
+	p3.add(pan3,BorderLayout.SOUTH);
+	b3.addActionListener(new ActionListener(){
+		public void actionPerformed(ActionEvent ae){
+			System.exit(0);
+		}
+	});
+	pan1.setBackground(new Color(171,100,100));
+	pan2.setBackground(new Color(171,100,100));
+	pan3.setBackground(new Color(171,100,100));
+	getContentPane().add(p1,BorderLayout.NORTH);
+	getContentPane().add(p2,BorderLayout.CENTER);
+	getContentPane().add(p3,BorderLayout.SOUTH);
+}
+public static void main(String a[])throws Exception{	 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+	 Tme screen = new Tme();
+	 screen.setVisible(true);
+	 screen.setResizable(false);
+	 screen.pack();
+}
+}
+Code to view features
+package tme;
+import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+import javax.swing.JFrame;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.awt.Font;
+public class ViewFeatures extends JFrame
+{
+	JTextArea area;
+	JScrollPane jsp;	
+public ViewFeatures(){
+	setTitle("View Features");
+	area = new JTextArea();
+	jsp = new JScrollPane(area);
+	getContentPane().add(jsp);
+	area.setEditable(false);
+	area.setFont(new Font("Monospaced",Font.BOLD,16));	
+}
+public void showFeatures(){
+	clear();
+	try{
+		BufferedReader br = new BufferedReader(new FileReader("dataset.arff"));
+		String line = null;
+		while((line = br.readLine())!=null){
+			area.append(line+"\n");
+		}
+		br.close();
+	}catch(Exception e){
+		e.printStackTrace();
+	}
+}
+public void clear(){
+	area.setText("");
+}
+}
